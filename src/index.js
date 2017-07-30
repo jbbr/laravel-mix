@@ -38,6 +38,20 @@ if (Mix.sees('laravel')) {
     Config.publicPath = 'public';
 }
 
+
+/**
+ * If the user activates hot reloading, with the --hot
+ * flag, we'll record it as a file, so that Laravel
+ * can detect it and update its mix() url paths.
+ */
+
+if (Mix.shouldHotReload()) {
+    new File(
+        path.join(Config.publicPath, 'hot')
+    ).write('hot reloading');
+}
+
+
 /**
  * Mix exposes a simple, fluent API for activating many common build
  * steps that a typical project should require. Behind the scenes,
