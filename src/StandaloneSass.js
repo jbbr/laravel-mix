@@ -38,7 +38,10 @@ class StandaloneSass {
      */
     compile(watch = false) {
         this.command = spawn(
-            'node_modules/node-sass/bin/node-sass', [this.src.path(), this.output.path()].concat(this.options(watch)), { shell: true }
+            'node_modules/node-sass/bin/node-sass', [
+                this.src.path(),
+                this.output.path()
+            ].concat(this.options(watch)), { shell: true }
         );
 
         this.whenOutputIsAvailable((output, event) => {
@@ -112,7 +115,7 @@ class StandaloneSass {
         console.log("\n");
         console.log(output);
 
-        if (Mix.isUsing('notifications')) {
+        if (Config.notifications.onSuccess) {
             notifier.notify({
                 title: 'Laravel Mix',
                 message: 'Sass Compilation Successful',
@@ -129,6 +132,7 @@ class StandaloneSass {
      */
     onFail(output) {
         output = output.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+
         console.log("\n");
         console.log('Sass Compilation Failed!');
         console.log();

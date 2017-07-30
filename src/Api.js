@@ -3,6 +3,7 @@ let CopyFilesTask = require('./tasks/CopyFilesTask');
 let ConcatFilesTask = require('./tasks/ConcatenateFilesTask');
 let VersionFilesTask = require('./tasks/VersionFilesTask');
 let glob = require('glob');
+let _ = require('lodash');
 
 class Api {
     /**
@@ -32,10 +33,7 @@ class Api {
     react(entry, output) {
         Config.react = true;
 
-        Verify.dependency(
-            'babel-preset-react',
-            'npm install babel-preset-react --save-dev'
-        );
+        Verify.dependency('babel-preset-react', ['babel-preset-react']);
 
         return this.js(entry, output);
     };
@@ -47,10 +45,7 @@ class Api {
     ts(entry, output) {
         Config.typeScript = true;
 
-        Verify.dependency(
-            'ts-loader',
-            'npm install ts-loader typescript --save-dev'
-        );
+        Verify.dependency('ts-loader', ['ts-loader', 'typescript']);
 
         return this.js(entry, output);
     };
@@ -115,10 +110,7 @@ class Api {
      * @param {object} pluginOptions
      */
     less(src, output, pluginOptions) {
-        Verify.dependency(
-            'less-loader',
-            'npm install less-loader less --save-dev'
-        );
+        Verify.dependency('less-loader', ['less-loader', 'less']);
 
         return this.preprocess('less', src, output, pluginOptions);
     }
@@ -132,12 +124,31 @@ class Api {
      * @param {object} pluginOptions
      */
     stylus(src, output, pluginOptions = {}) {
-        Verify.dependency(
-            'stylus-loader',
-            'npm install stylus-loader stylus --save-dev'
-        );
+        Verify.dependency('stylus-loader', ['stylus-loader', 'stylus']);
 
         return this.preprocess('stylus', src, output, pluginOptions);
+    };
+
+
+    /**
+     * Register postcss compilation.
+     *
+     * @param {string} src
+     * @param {string} output
+     * @param {array}  postCssPlugins
+     */
+    postCss(src, output, postCssPlugins = []) {
+        Verify.preprocessor('postCss', src, output);
+
+        src = new File(src);
+
+        output = this._normalizeOutput(new File(output), src.nameWithoutExtension() + '.css');
+
+        Config.preprocessors['postCss'] = (Config.preprocessors['postCss'] || []).concat({
+            src, output, postCssPlugins
+        });
+
+        return this;
     };
 
 
@@ -181,7 +192,14 @@ class Api {
 
         Verify.combine(src, output);
 
-        let task = new ConcatFilesTask({ src, output, babel, skipSourceMaps });
+        if (typeof src === 'string' && File.find(src).isDirectory()) {
+            src = _.pull(
+                glob.sync(path.join(src, '**/*'), { nodir: true }),
+                output.relativePath()
+            );
+        }
+
+        let task = new ConcatFilesTask({ src, output, babel });
 
         Mix.addTask(task);
 
@@ -281,7 +299,7 @@ class Api {
     browserSync(config = {}) {
         Verify.dependency(
             'browser-sync-webpack-plugin',
-            'npm install browser-sync-webpack-plugin browser-sync --save-dev',
+            ['browser-sync-webpack-plugin', 'browser-sync'],
             true
         );
 
@@ -305,13 +323,14 @@ class Api {
 
         files = flatten([].concat(files).map(filePath => {
             if (File.find(filePath).isDirectory()) {
-                filePath += (path.sep + '*');
+                filePath += (path.sep + '**/*');
             }
 
             if (! filePath.includes('*')) return filePath;
 
             return glob.sync(
-                new File(filePath).forceFromPublic().relativePath()
+                new File(filePath).forceFromPublic().relativePath(),
+                { nodir: true }
             );
         }));
 
@@ -343,7 +362,7 @@ class Api {
      * @param {Boolean} productionToo
      */
     sourceMaps(productionToo = true) {
-        let type = 'cheap-module-eval-source-map';
+        let type = 'inline-source-map';
 
         if (Mix.inProduction()) {
             type = productionToo ? 'cheap-source-map' : false;
@@ -392,7 +411,11 @@ class Api {
      * Disable success notifications.
      */
     disableSuccessNotifications() {
-        Config.notificationsOnSuccess = false;
+        Config.notifications = {
+            onSuccess: false,
+            onFailure: true
+        };
+
         return this;
     };
 
@@ -440,7 +463,7 @@ class Api {
 
             Verify.dependency(
                 'purifycss-webpack',
-                'npm install purifycss-webpack purify-css --save-dev',
+                ['purifycss-webpack', 'purify-css'],
                 true // abortOnComplete
             );
         }

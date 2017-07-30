@@ -45,11 +45,13 @@ if (Mix.sees('laravel')) {
  * can detect it and update its mix() url paths.
  */
 
-if (Mix.shouldHotReload()) {
-    new File(
-        path.join(Config.publicPath, 'hot')
-    ).write('hot reloading');
-}
+Mix.listen('init', () => {
+    if (Mix.shouldHotReload()) {
+        new File(
+            path.join(Config.publicPath, 'hot')
+        ).write('hot reloading');
+    }
+});
 
 
 /**
@@ -63,4 +65,4 @@ let api = new Api();
 
 module.exports = api;
 module.exports.mix = api; // Deprecated.
-module.exports.config = Mix.config;
+module.exports.config = Config;

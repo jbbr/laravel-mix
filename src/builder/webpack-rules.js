@@ -24,6 +24,9 @@ module.exports = function () {
             test: /\.tsx?$/,
             loader: 'ts-loader',
             exclude: /node_modules/,
+            options: {
+                appendTsSuffixTo: [/\.vue$/],
+            }
         });
     }
 
@@ -31,6 +34,8 @@ module.exports = function () {
     // CSS Compilation.
     rules.push({
         test: /\.css$/,
+
+        exclude: Config.preprocessors.postCss ? Config.preprocessors.postCss.map(postCss => postCss.src.path()) : [],
         loaders: ['style-loader', 'css-loader']
     });
 
@@ -147,7 +152,11 @@ module.exports = function () {
                             ident: 'postcss',
                             plugins: [
                                 require('autoprefixer')
-                            ].concat(Config.postCss)
+                            ].concat(
+                                preprocessor.postCssPlugins && preprocessor.postCssPlugins.length
+                                    ? preprocessor.postCssPlugins
+                                    : Config.postCss
+                            )
                         }
                     },
                 ];
@@ -162,13 +171,15 @@ module.exports = function () {
                     });
                 }
 
-                loaders.push({
-                    loader: `${type}-loader`,
-                    options: Object.assign(
-                        preprocessor.pluginOptions,
-                        { sourceMap: (type === 'sass' && Config.processCssUrls) ? true : Mix.isUsing('sourcemaps') }
-                    )
-                });
+                if (type !== 'postCss') {
+                    loaders.push({
+                        loader: `${type}-loader`,
+                        options: Object.assign(
+                            preprocessor.pluginOptions,
+                            { sourceMap: (type === 'sass' && Config.processCssUrls) ? true : Mix.isUsing('sourcemaps') }
+                        )
+                    });
+                }
 
                 rules.push({
                     test: preprocessor.src.path(),
